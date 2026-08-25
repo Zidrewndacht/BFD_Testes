@@ -78,11 +78,6 @@ O `pytest` descobre automaticamente qualquer arquivo que comece com `test_` e qu
 
 <details>
 <summary> Por que pytest em vez de unittest?  </summary>
-Excelente observação. Essa é uma dúvida muito comum para quem está começando e descobre que o Python já "traz" um framework de testes embutido. Explicar o *porquê* da escolha ajuda o aluno a entender as convenções do mercado.
-
-Abaixo está a seção para ser inserida logo após a instalação das ferramentas (como uma subseção **1.3** ou **1.4** na Aula 1). Ela usa comparação visual de código para provar o ponto sem precisar de longos textos teóricos.
-
----
 
 ### 1.3 Por que `pytest` e não o `unittest` da biblioteca padrão?
 
