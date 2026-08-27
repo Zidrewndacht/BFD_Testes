@@ -1336,7 +1336,7 @@ Ao final desta aula, você deve conseguir:
 
 ---
 
-## 11. O que não vimos no curso
+## 11. O que não vimos no curso até aqui
 
 Os tópicos abaixo são comuns em testes profissionais, mas ficaram de fora desta aula introdutória para manter o foco no que é essencial para o seu projeto atual.
 
