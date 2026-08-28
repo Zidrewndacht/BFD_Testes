@@ -218,10 +218,9 @@ projeto/
 ├── .venv/
 ├── app.py
 ├── requirements.txt
-└── tests/
-    ├── conftest.py
-    ├── data.sql
-    └── test_tarefas.py
+├── conftest.py
+├── data.sql
+└── test_tarefas.py
 ```
 
 Com o ambiente virtual ativado:
