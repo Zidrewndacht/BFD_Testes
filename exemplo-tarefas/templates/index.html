@@ -7,11 +7,17 @@
 <body>
     <h1>Minhas Tarefas</h1>
     
+    <!-- 
+      O Playwright usará os atributos abaixo para localizar os elementos.
+      O 'id' é útil para seletores CSS, mas o 'placeholder' e o texto do botão
+      são alvos preferenciais para os locators semânticos (get_by_*) do Playwright.
+    -->
     <form id="form-tarefa">
         <input type="text" id="descricao" placeholder="Descrição da tarefa" required>
         <button type="submit">Adicionar</button>
     </form>
 
+    <!-- Lista que será populada dinamicamente via JavaScript -->
     <ul id="lista-tarefas"></ul>
 
     <script>
@@ -19,6 +25,9 @@
         const lista = document.getElementById('lista-tarefas');
         const inputDescricao = document.getElementById('descricao');
 
+        // Função que consome a API Flask.
+        // O Playwright precisará esperar esta função terminar (auto-wait)
+        // antes de asserir que a tarefa apareceu na tela.
         async function carregarTarefas() {
             const resposta = await fetch('/api/tarefas');
             const tarefas = await resposta.json();
@@ -30,6 +39,9 @@
             });
         }
 
+        // Intercepta o envio do formulário para não recarregar a página.
+        // O atributo 'required' no input impede que este evento dispare
+        // se o campo estiver vazio, bloqueando o fetch antes da rede.
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const descricao = inputDescricao.value;
@@ -41,11 +53,12 @@
             });
             
             if (resposta.ok) {
-                inputDescricao.value = ''; // Limpa o input
-                carregarTarefas();         // Atualiza a lista
+                inputDescricao.value = ''; // Limpa o input (alvo de asserção E2E)
+                carregarTarefas();         // Atualiza a lista (alvo de asserção E2E)
             }
         });
 
+        // Carga inicial ao abrir a página
         carregarTarefas();
     </script>
 </body>

@@ -349,16 +349,20 @@ Após adicionar uma tarefa com sucesso, o JavaScript que fornecemos limpa o camp
 
 ```python
 def test_input_eh_limpo_apos_adicionar(page, servidor):
+    # ARRANGE
     page.goto(servidor)
     input_tarefa = page.get_by_placeholder("Descrição da tarefa")
     
+    # ACT
     input_tarefa.fill("Tarefa temporária")
     page.get_by_role("button", name="Adicionar").click()
     
-    # Espera a tarefa aparecer para garantir que o fetch terminou
+    # ASSERT 1: Espera a tarefa aparecer para garantir que o fetch terminou
+    # e o DOM foi atualizado. Isso sincroniza o teste com o estado final da UI.
     expect(page.get_by_text("Tarefa temporária")).to_be_visible()
     
-    # Verifica se o input foi limpo pelo JS
+    # ASSERT 2: Verifica se o input foi limpo pelo JS (inputDescricao.value = '').
+    # O matcher 'to_be_empty()' é específico para campos de formulário.
     expect(input_tarefa).to_be_empty()
 ```
 </details>
@@ -376,18 +380,28 @@ Escreva um teste que tente adicionar uma tarefa com o campo vazio. Como garantim
 
 ```python
 def test_formulario_nao_envia_vazio(page, servidor):
+    # ARRANGE
     page.goto(servidor)
     
-    # Graças à fixture `limpar_banco`, sabemos que a lista começa 100% vazia.
-    # Isso torna nossa asserção determinística e à prova de flakiness.
+    # BOA PRÁTICA: Aguarda todas as requisições de rede iniciais terminarem.
+    # O JS da página faz um fetch('/api/tarefas') ao carregar.
+    # 'networkidle' garante que o estado inicial da tela está estável
+    # antes de começarmos a interagir e fazer asserções.
+    page.wait_for_load_state('networkidle')
+    
+    # ASSERT 1: Como o conftest.py limpa o banco antes de cada teste (autouse=True),
+    # temos certeza absoluta de que a lista começa vazia.
     lista = page.locator("#lista-tarefas li")
     expect(lista).to_have_count(0)
     
-    # Clica direto sem preencher. O HTML5 (required) bloqueia o submit.
+    # ACT: Clica direto sem preencher.
+    # O atributo HTML5 'required' no input bloqueia o submit nativamente.
+    # O evento 'submit' do JS nunca dispara, logo, nenhum fetch é enviado.
     page.get_by_role("button", name="Adicionar").click()
     
-    # O JS nunca rodou, o fetch nunca foi disparado.
-    # A lista deve continuar rigorosamente vazia.
+    # ASSERT 2: A lista deve continuar rigorosamente vazia.
+    # Isso prova que o backend Flask nunca recebeu a requisição inválida,
+    # validando a integração entre a validação HTML5 e o comportamento da UI.
     expect(lista).to_have_count(0)
 ```
 </details>
@@ -402,19 +416,24 @@ Escreva um teste que adicione três tarefas diferentes em sequência e verifique
 
 ```python
 def test_adicionar_multiplas_tarefas(page, servidor):
+    # ARRANGE
     page.goto(servidor)
     input_tarefa = page.get_by_placeholder("Descrição da tarefa")
     botao = page.get_by_role("button", name="Adicionar")
     
     tarefas = ["Comprar pão", "Estudar Python", "Pagar contas"]
     
+    # ACT: Loop para adicionar múltiplas tarefas em sequência.
     for nome in tarefas:
         input_tarefa.fill(nome)
         botao.click()
-        # Espera cada uma aparecer antes de adicionar a próxima
+        
+        # ASSERT (dentro do loop): Espera cada uma aparecer antes de adicionar a próxima.
+        # Isso evita que o Playwright digite a próxima tarefa enquanto o fetch
+        # da anterior ainda está atualizando o DOM, prevenindo race conditions.
         expect(page.get_by_text(nome)).to_be_visible()
         
-    # Verificação final
+    # ASSERT FINAL: Verificação cruzada de que todas coexistem na tela.
     expect(page.get_by_text("Comprar pão")).to_be_visible()
     expect(page.get_by_text("Estudar Python")).to_be_visible()
     expect(page.get_by_text("Pagar contas")).to_be_visible()

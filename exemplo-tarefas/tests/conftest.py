@@ -32,6 +32,39 @@ def app():
     os.close(db_fd)
     os.unlink(db_path)
 
+@pytest.fixture
+def client(app):
+    return app.test_client()
+
+# Fixtures para aula 3:
+
+# FIXTURE: app_e2e
+# Diferente da Aula 2, onde o escopo padrão (function) criava um app por teste,
+# aqui usamos scope="session". O servidor Flask será criado apenas UMA VEZ
+# para toda a suíte de testes E2E.
+# Motivo: Iniciar o Flask e criar as tabelas a cada teste E2E seria muito lento.
+# O isolamento de dados será garantido pela fixture 'limpar_banco' abaixo.
+@pytest.fixture(scope="session")
+def app_e2e():
+    """Cria um banco temporário e a aplicação Flask para a sessão de testes E2E."""
+    db_fd, db_path = tempfile.mkstemp()
+    app = criar_app({
+        "TESTING": True,
+        "DATABASE": db_path,
+    })
+    
+    yield app
+    
+    # Teardown da sessão: remove o banco temporário após todos os testes E2E terminarem.
+    os.close(db_fd)
+    os.unlink(db_path)
+
+
+# FIXTURE: limpar_banco
+# O decorator autouse=True faz com que esta fixture seja executada automaticamente
+# ANTES de cada teste, mesmo que o teste não a declare nos parâmetros.
+# Isso implementa o padrão "Database Cleaner": garantimos que cada teste E2E
+# comece com o banco 100% vazio, evitando que dados de um teste vazem para o outro.
 @pytest.fixture(autouse=True)
 def limpar_banco(app_e2e):
     """
@@ -43,34 +76,26 @@ def limpar_banco(app_e2e):
     with app_e2e.app_context():
         from app import get_conexao
         conexao = get_conexao()
+        # Trunca a tabela de tarefas. Não precisamos recriar o schema,
+        # pois o app_e2e já foi inicializado no escopo da sessão.
         conexao.execute("DELETE FROM tarefas")
         conexao.commit()
         conexao.close()
         
     yield
-    # Poderíamos limpar após o teste também, mas limpar antes já garante 
-    # que o próximo teste encontre um ambiente virgem.
+    # O teardown após o yield está vazio. Limpar antes do teste é suficiente
+    # para garantir que o próximo teste encontre um ambiente virgem.
 
-@pytest.fixture
-def client(app):
-    return app.test_client()
 
-# Fixtures para aula 3:
-@pytest.fixture(scope="session")
-def app_e2e():
-    """Cria um banco temporário e a aplicação Flask para a sessão de testes E2E."""
-    db_fd, db_path = tempfile.mkstemp()
-    app = criar_app({
-        "TESTING": True,
-        "DATABASE": db_path,
-    })
-    yield app
-    os.close(db_fd)
-    os.unlink(db_path)
-
+# FIXTURE: servidor
+# Sobe o Flask em uma thread secundária para que o pytest (na thread principal)
+# possa continuar rodando e executar o Playwright em paralelo.
+# Escopo "session" para não subir/derrubar o servidor a cada teste.
 @pytest.fixture(scope="session")
 def servidor(app_e2e):
     """Sobe o servidor Flask em uma porta livre em uma thread separada."""
+    # Cria um socket temporário apenas para descobrir uma porta livre no sistema.
+    # Isso evita o erro "Address already in use" se a porta 5000 estiver ocupada.
     s = socket.socket()
     s.bind(('', 0)) # Pega uma porta livre do sistema
     port = s.getsockname()[1]
@@ -79,10 +104,15 @@ def servidor(app_e2e):
     url = f"http://localhost:{port}"
     
     def run():
-        # use_reloader=False é crucial para não duplicar a thread
+        # use_reloader=False é crucial. O reloader do Flask cria processos filhos
+        # que quebrariam o controle da nossa thread de teste.
+        # threaded=True permite que o Flask atenda múltiplas requisições do Playwright.
         app_e2e.run(host="localhost", port=port, use_reloader=False, threaded=True)
         
+    # daemon=True garante que a thread do servidor seja encerrada abruptamente
+    # quando o processo principal do pytest terminar, evitando travamentos no terminal.
     thread = threading.Thread(target=run, daemon=True)
     thread.start()
     
+    # Entrega a URL base para os testes usarem no page.goto()
     yield url

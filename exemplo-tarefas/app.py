@@ -137,10 +137,12 @@ def criar_app(config_extra=None):
         finally:
             conexao.close()
 
-    # frontend para aula 3:
+    # Rota raiz que serve a interface web.
+    # O Playwright acessará esta URL para iniciar os testes E2E.
     @app.get("/")
     def index():
         return render_template("index.html")
+
 
     return app
 
