@@ -4,7 +4,11 @@
 
 **Objetivo da aula:** testar rotas Flask que acessam um banco SQLite sem precisar rodar o servidor manualmente, sem sujar o banco de desenvolvimento e sem depender de navegador, Postman ou Insomnia. Você vai usar o `test_client` do Flask e **fixtures** do `pytest`.
 
+> **Definição rápida:** **Teste unitário** é um pedaço de código cujo único propósito é executar outro pedaço do seu código e verificar se ele, sozinho, se comporta como o esperado.
+
 > **Definição rápida:** **Teste de integração** verifica se duas ou mais partes do sistema funcionam juntas. Nesta aula, vamos testar a integração entre **rota Flask + validação HTTP + Repositório OOP + SQLite**.
+
+---
 
 Esta aula segue o padrão geral de testes do tutorial oficial do Flask:
 - [Testing Flask Applications](https://flask.palletsprojects.com/en/stable/testing/)

@@ -4,7 +4,7 @@
 
 **Objetivo da aula:** entender a diferença entre teste manual e automatizado, escrever testes unitários com `pytest` para validar regras de negócio e usar o `ruff` para manter o código padronizado.
 
-> **Nota de vocabulário:** **Teste automatizado** é um pedaço de código cujo único propósito é executar outro pedaço do seu código e verificar se ele se comportou como o esperado.
+> **Definição rápida:** **Teste unitário** é um pedaço de código cujo único propósito é executar outro pedaço do seu código e verificar se ele, sozinho, se comporta como o esperado.
 
 ---
 
