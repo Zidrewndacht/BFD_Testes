@@ -749,6 +749,29 @@ def test_concluir_persiste_no_banco(app, client):
 Como exercício adicional, aplique os conceitos desta aula (fixtures, `test_client`, banco temporário com `tempfile.mkstemp()`) para testar as rotas de autenticação e posts do projeto **Flaskr** do tutorial oficial.
 Guia de referência: [Test Coverage — Flask Tutorial](https://flask.palletsprojects.com/en/stable/tutorial/tests/)
 
+<details>
+<summary>Detalhes</summary>
+
+## Resumo das Funcionalidades do pytest Utilizadas
+
+| Funcionalidade | Arquivo(s) | Propósito |
+|---|---|---|
+| `@pytest.fixture` | conftest.py | Cria setup/teardown reutilizável (app, client, runner, auth) |
+| `yield` em fixtures | conftest.py | Permite código de teardown após o teste, mesmo em caso de falha |
+| `pytest.raises` | test_db.py | Captura exceções esperadas e permite inspecionar a mensagem |
+| `@pytest.mark.parametrize` | test_auth.py, test_blog.py | Executa o mesmo teste com múltiplos conjuntos de dados de entrada |
+| `monkeypatch.setattr` | test_db.py | Substitui funções/métodos temporariamente (mocking) |
+| `with app.app_context()` | test_db.py, test_blog.py | Permite usar `get_db()` e acessar `current_app` fora de views |
+| `with client:` | test_auth.py | Mantém contexto de request ativo para inspecionar `session` após requisição |
+| `session` e `g` | test_auth.py | Inspeciona estado da sessão e variáveis globais de request em testes |
+| `response.data` | test_blog.py | Acessa corpo da resposta como bytes para verificar HTML renderizado |
+| `response.headers` | test_auth.py, test_blog.py | Verifica headers HTTP (ex: `Location` em redirects) |
+| `response.status_code` | test_auth.py, test_blog.py | Verifica códigos de status HTTP (200, 302, 403, 404) |
+
+Esses testes do Flaskr demonstram padrões avançados que vão além do escopo da Aula 2, mas são excelentes referências para quando você implementar autenticação, templates HTML e autorização em projetos futuros.
+</details>
+
+
 ---
 
 ## 20. Checklist da aula
