@@ -7,7 +7,6 @@ from flaskr import create_app
 from flaskr.db import get_db
 from flaskr.db import init_db
 
-
 # conftest.py é descoberto automaticamente pelo pytest quando os testes estão
 # nesta mesma pasta. As fixtures definidas aqui ficam disponíveis para os
 # arquivos test_*.py sem precisar importá-las manualmente.

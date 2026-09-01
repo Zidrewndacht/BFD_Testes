@@ -37,9 +37,3 @@ Rascunho, em ajustes, alguns podem ainda ser incluídos nas aulas e removidos da
 | **Emulação de dispositivos e rede** | Testar a aplicação em diferentes tamanhos de tela (mobile, tablet), geolocalizações e condições de rede lenta usando recursos nativos do Playwright. | [Playwright — Emulation](https://playwright.dev/python/docs/emulation) |
 | **Testes em múltiplos navegadores** | Configurar o Playwright para rodar a mesma suíte em Chromium, Firefox e WebKit, garantindo compatibilidade cross-browser. | [Playwright — Browsers](https://playwright.dev/python/docs/browsers) |
 | **Network interception** | Interceptar e modificar requisições HTTP feitas pela página durante o teste, útil para simular respostas lentas, erros de servidor ou APIs externas sem dependência de rede. | [Playwright — Network](https://playwright.dev/python/docs/network) |
-
----
-
-**Resumo do ajuste:** a seção passou a ser uma **biblioteca de caminhos de estudo**, onde cada linha responde implicitamente à pergunta *"acabei esta aula, para onde vou agora se quiser me aprofundar?"*. Tópicos distantes do tema da aula (CI/CD, TDD estrito na Aula 2, etc.) foram removidos, pois pertenceriam a aulas específicas sobre esses assuntos.
-
-Posso aplicar esse mesmo padrão editorial à Aula 3 quando formos montá-la.

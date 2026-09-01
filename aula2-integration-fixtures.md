@@ -756,6 +756,20 @@ Guia de referência: [Test Coverage — Flask Tutorial](https://flask.palletspro
 <details>
 <summary>Detalhes</summary>
 
+> **Como rodar os testes:**
+> 
+> Abra o terminal na **raiz da pasta do projeto** (onde está o arquivo `app.py` ou a pasta `flaskr/`, e ao lado dela a pasta `tests/`). Não entre na pasta `tests/` pelo terminal.
+> 
+> Execute o comando:
+> 
+> ```bash
+> python -m pytest -v
+> ```
+> 
+> **Por que `python -m pytest` e não apenas `pytest`?**
+> diferente de Flask que funciona com `flask --app flaskr run` na pasta de destino, Pytest precisa que o módulo seja adicionado ao caminho de busca do Python (`sys.path`). Se você rodar apenas `pytest`, o Python não conseguirá encontrar `from flaskr import create_app` ou `from app import criar_app`, etc., resultando em um `ModuleNotFoundError`. 
+
+
 ## Resumo das Funcionalidades do pytest Utilizadas
 
 | Funcionalidade | Arquivo(s) | Propósito |

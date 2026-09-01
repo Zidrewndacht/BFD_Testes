@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Minhas Tarefas</title>
+</head>
+<body>
+    <h1>Minhas Tarefas</h1>
+    
+    <form id="form-tarefa">
+        <input type="text" id="descricao" placeholder="Descrição da tarefa" required>
+        <button type="submit">Adicionar</button>
+    </form>
+
+    <ul id="lista-tarefas"></ul>
+
+    <script>
+        const form = document.getElementById('form-tarefa');
+        const lista = document.getElementById('lista-tarefas');
+        const inputDescricao = document.getElementById('descricao');
+
+        async function carregarTarefas() {
+            const resposta = await fetch('/api/tarefas');
+            const tarefas = await resposta.json();
+            lista.innerHTML = '';
+            tarefas.forEach(tarefa => {
+                const li = document.createElement('li');
+                li.textContent = tarefa.descricao;
+                lista.appendChild(li);
+            });
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const descricao = inputDescricao.value;
+            
+            const resposta = await fetch('/api/tarefas', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({descricao: descricao})
+            });
+            
+            if (resposta.ok) {
+                inputDescricao.value = ''; // Limpa o input
+                carregarTarefas();         // Atualiza a lista
+            }
+        });
+
+        carregarTarefas();
+    </script>
+</body>
+</html>

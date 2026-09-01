@@ -148,11 +148,11 @@ def criar_app(config_extra=None):
     return app
 ```
 
-### 3.3 O servidor de testes (`tests/conftest.py`)
+#### 3.3 O servidor de testes (`tests/conftest.py`) e o Princípio do Isolamento
 
-O Playwright precisa de um servidor web rodando para acessar a página. Em vez de pedir para o aluno abrir dois terminais (um para o `flask run` e outro para o `pytest`), vamos criar uma fixture que sobe o Flask em uma *thread* secundária automaticamente.
+O Playwright precisa de um servidor web rodando para acessar a página. Vamos criar uma fixture que sobe o Flask em uma *thread* secundária automaticamente.
 
-Adicione ou atualize o seu `tests/conftest.py`:
+Nota: Um teste nunca pode depender da ordem em que é executado, nem do estado deixado por um teste anterior. Se o Teste A cria uma tarefa, o Teste B não pode começar a rodar vendo essa tarefa na tela. Para garantir performance (não reiniciar o servidor Flask do zero a cada teste), vamos manter o servidor no ar, mas **limpar o banco de dados antes de cada teste individual** através de uma fixture com `autouse=True`:
 
 ```python
 import os
@@ -174,6 +174,25 @@ def app_e2e():
     os.close(db_fd)
     os.unlink(db_path)
 
+@pytest.fixture(autouse=True)
+def limpar_banco(app_e2e):
+    """
+    ISOLAMENTO DE ESTADO (Regra de Ouro):
+    Roda automaticamente antes de cada teste.
+    Garante que o banco de dados comece 100% vazio para cada cenário,
+    evitando que testes 'vazem' dados uns para os outros.
+    """
+    with app_e2e.app_context():
+        from app import get_conexao
+        conexao = get_conexao()
+        conexao.execute("DELETE FROM tarefas")
+        conexao.commit()
+        conexao.close()
+        
+    yield
+    # Poderíamos limpar após o teste também, mas limpar antes já garante 
+    # que o próximo teste encontre um ambiente virgem.
+
 @pytest.fixture(scope="session")
 def servidor(app_e2e):
     """Sobe o servidor Flask em uma porta livre em uma thread separada."""
@@ -185,7 +204,7 @@ def servidor(app_e2e):
     url = f"http://localhost:{port}"
     
     def run():
-        # use_reloader=False é crucial para não duplicar a thread
+        # use_reloader=False é crucial para não duplicar a thread do Flask
         app_e2e.run(host="localhost", port=port, use_reloader=False, threaded=True)
         
     thread = threading.Thread(target=run, daemon=True)
@@ -194,7 +213,9 @@ def servidor(app_e2e):
     yield url
 ```
 
----
+**O que mudou?**
+Adicionamos a fixture `limpar_banco` com o decorador `autouse=True`. Isso instrui o `pytest` a executar essa função **antes e depois de cada teste E2E**, mesmo que o teste não a declare explicitamente em seus parâmetros. É o padrão *Database Cleaner* utilizado em frameworks profissionais de mercado.
+
 
 ## 4. O primeiro teste E2E
 
@@ -278,6 +299,19 @@ expect(page.get_by_text("Estudar Playwright")).to_be_visible()
 - `expect(locator).to_be_empty()` (ótimo para verificar se um input foi limpo)
 - `expect(locator).to_be_enabled()` / `to_be_disabled()`
 
+#### 6.5 Boas Práticas: Testes Determinísticos
+
+Na engenharia de testes, um teste é considerado **flaky (intermitente)** quando ele passa e falha aleatoriamente sem que nenhuma linha de código da aplicação tenha mudado. **Testes flaky são piores que a ausência de testes**, pois destroem a confiança da equipe na suíte de automação.
+
+As duas causas mais comuns de testes E2E flaky e suas soluções são:
+
+1. **Vazamento de Estado:** Um teste depende de dados criados por outro teste. 
+   * **Solução:** Nunca confie em dados residuais. Use `autouse=True` para limpar o ambiente antes de cada teste ou crie os dados explicitamente dentro do próprio teste.
+2. **Asserções Prematuras (Race Conditions):** O teste verifica algo na tela antes de o JavaScript terminar de processar uma requisição de rede.
+   * **Solução:** Nunca use `assert` puro do Python para verificar elementos DOM que dependem de rede. Sempre use o `expect()` do Playwright, que possui *auto-wait* (espera ativa) embutido.
+
+> **Regra de Sanidade:** Um teste E2E correto deve passar consistentemente tanto em modo `headless` (CI/CD, velocidade máxima) quanto em modo `--headed --slowmo 1000` (depuração visual). Se o teste falha ao ser desacelerado, ele não estava validando a integração real, estava apenas "vencendo uma corrida" contra o navegador.
+
 ---
 
 ## 7. Executando em modo visível e em outros navegadores
@@ -292,7 +326,7 @@ O navegador abrirá na sua tela, executará os passos em velocidade real e fecha
 
 ### 7.2 Modo Lento (Para acompanhar passo a passo)
 ```bash
-pytest --headed --slow-mo 500
+pytest --headed --slowmo 500
 ```
 Adiciona um atraso de 500ms entre cada ação (fill, click), ideal para entender o que o teste está fazendo.
 
@@ -331,10 +365,11 @@ def test_input_eh_limpo_apos_adicionar(page, servidor):
 
 ---
 
-### Exercício 2 — Validação de formulário HTML
-O nosso input possui o atributo `required`. Se tentarmos clicar em "Adicionar" com o campo vazio, o navegador bloqueia o envio e exibe um tooltip de erro. O Playwright consegue verificar se o formulário não foi enviado.
+#### Exercício 2 — A Validação Nativa do HTML5
 
-Escreva um teste que clique em "Adicionar" sem preencher nada e verifique que a lista de tarefas continua vazia (ou que a tarefa inválida não apareceu).
+O nosso input possui o atributo `required` (`<input ... required>`). Isso significa que o próprio navegador **bloqueia o envio do formulário** e exibe um tooltip de erro nativo antes mesmo de o JavaScript ser executado. Consequentemente, o `fetch` nunca é disparado.
+
+Escreva um teste que tente adicionar uma tarefa com o campo vazio. Como garantimos no `conftest.py` que o banco começa limpo a cada teste, você pode asserir com segurança que a lista de tarefas na tela deve permanecer estritamente vazia (`to_have_count(0)`), provando que o backend nunca recebeu a requisição inválida.
 
 <details>
 <summary><strong>Ver solução resumida</strong></summary>
@@ -343,14 +378,17 @@ Escreva um teste que clique em "Adicionar" sem preencher nada e verifique que a 
 def test_formulario_nao_envia_vazio(page, servidor):
     page.goto(servidor)
     
-    # Clica direto sem preencher
+    # Graças à fixture `limpar_banco`, sabemos que a lista começa 100% vazia.
+    # Isso torna nossa asserção determinística e à prova de flakiness.
+    lista = page.locator("#lista-tarefas li")
+    expect(lista).to_have_count(0)
+    
+    # Clica direto sem preencher. O HTML5 (required) bloqueia o submit.
     page.get_by_role("button", name="Adicionar").click()
     
-    # A tarefa " " (espaço) ou vazia não deve aparecer na lista.
-    # O expect com not_to_be_visible ou to_have_count é útil aqui.
-    # Vamos verificar que não existe nenhum <li> com texto vazio ou apenas espaços.
-    lista = page.locator("#lista-tarefas li")
-    expect(lista).to_have_count(0) # O banco de teste começa vazio
+    # O JS nunca rodou, o fetch nunca foi disparado.
+    # A lista deve continuar rigorosamente vazia.
+    expect(lista).to_have_count(0)
 ```
 </details>
 
